@@ -1,5 +1,4 @@
-import { ordersService, productsService } from '@/services/api';
-import { Order, OrderItem, Product } from '@/utils/products.types';
+import { Order, Product } from '../utils/products.types';
 
 // Hydrate each order's items with the full product object if missing
 export function hydrateOrdersWithProducts(orders: Order[], products: Product[]): Order[] {
@@ -26,6 +25,10 @@ export function hydrateOrdersWithProducts(orders: Order[], products: Product[]):
             category: 'essentials',
             image: '',
           };
+        }
+        // Ensure image is preserved if present
+        if (!hydratedProduct.image && productMap[String(productKey)]?.image) {
+          hydratedProduct.image = productMap[String(productKey)].image;
         }
         return {
           ...item,

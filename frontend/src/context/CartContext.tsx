@@ -127,20 +127,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync cart to backend with debounce and error handling
   useEffect(() => {
-    if (!isAuthenticated || !user) return;
-
-    if (initialLoadRef.current) {
-      // Skip syncing on initial load to avoid quantity increments
+    console.log('CartContext syncing useEffect triggered. Items:', items);
+    if (!isAuthenticated || !user) {
+      console.log('Not authenticated or no user, skipping sync');
       return;
     }
 
-    if (syncingRef.current) return;
+    if (initialLoadRef.current) {
+      // Skip syncing on initial load to avoid quantity increments
+      console.log('Initial load, skipping sync');
+      return;
+    }
+
+    if (syncingRef.current) {
+      console.log('Already syncing, skipping this sync');
+      return;
+    }
     syncingRef.current = true;
 
     const syncCartToBackend = async () => {
       try {
         const lastSyncedItems = lastSyncedItemsRef.current;
         const currentItems = items;
+
+        console.log('Syncing cart to backend. Last synced items:', lastSyncedItems);
+        console.log('Current items:', currentItems);
 
         // Helper to create a map from productId to CartItem
         const mapByProductId = (arr: CartItem[]) => {
@@ -155,6 +166,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Detect removed items (in last but not in current)
         for (const [productId, lastItem] of lastMap.entries()) {
           if (!currentMap.has(productId)) {
+            console.log('Removing item from backend cart:', productId);
             await ordersService.removeItemFromCart(productId);
           }
         }
@@ -163,10 +175,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         for (const [productId, currentItem] of currentMap.entries()) {
           const lastItem = lastMap.get(productId);
           if (!lastItem) {
-            // Added item
+            console.log('Adding item to backend cart:', productId, currentItem.quantity);
             await ordersService.addItemToCart(productId, currentItem.quantity);
           } else if (lastItem.quantity !== currentItem.quantity) {
-            // Updated quantity
+            console.log('Updating item quantity in backend cart:', productId, currentItem.quantity);
             await ordersService.updateItemQuantity(productId, currentItem.quantity);
           }
         }

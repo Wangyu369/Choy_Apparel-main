@@ -1,33 +1,22 @@
-
-import React from 'react';
+  import React from 'react';
 import { Package } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { ordersService, productsService } from '@/services/api';
-import { formatDate } from '@/lib/utils';
+} from './ui/dialog';
+import { Button } from './ui/button';
+import { ordersService, productsService, Order as OrderType } from '../services/api';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from './ui/badge';
 import { CheckCircle, Clock, Loader, Truck, XCircle } from 'lucide-react';
-import { OrderStatus } from '@/utils/products.types';
+import { hydrateOrdersWithProducts } from './hydrateOrderProducts';
 
-// Helper to get appropriate icon for status (copied from OrderList.tsx)
-const getStatusIcon = (status: OrderStatus) => {
-  switch (status) {
+const getStatusIcon = (status: string) => {
+  switch (status.toLowerCase()) {
     case 'pending':
       return <Clock className="h-4 w-4" />;
     case 'processing':
@@ -43,10 +32,9 @@ const getStatusIcon = (status: OrderStatus) => {
   }
 };
 
-// Helper to get status badge based on order status (copied from OrderList.tsx)
-const getStatusBadge = (status: OrderStatus) => {
+const getStatusBadge = (status: string) => {
   let badgeVariant: "default" | "secondary" | "destructive" | "outline" = "default";
-  switch (status) {
+  switch (status.toLowerCase()) {
     case 'delivered':
       badgeVariant = "default";
       break;
@@ -69,76 +57,72 @@ const getStatusBadge = (status: OrderStatus) => {
   );
 };
 
-import { hydrateOrdersWithProducts } from './hydrateOrderProducts';
-
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-import type { Order } from '@/utils/products.types';
-
 const OrdersDialog = () => {
-  console.log('[OrdersDialog] component mounted');
-  const { data: ordersRaw, isLoading } = useQuery({
+  const { data: ordersRaw, isLoading } = useQuery<OrderType[]>({
     queryKey: ['orders'],
     queryFn: ordersService.getOrders,
   });
-  const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
+  const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: productsService.getProducts,
   });
-  console.log('[OrdersDialog] products from server:', products);
 
   const queryClient = useQueryClient();
 
-  // Cancel order mutation
-  const cancelOrderMutation = useMutation({
-    mutationFn: async (order: Order) => {
+  const cancelOrderMutation = useMutation<void, Error, OrderType>({
+    mutationFn: async (order) => {
+      console.log('Canceling order with id:', order.id);
       await ordersService.cancelOrder(order.id);
       await Promise.all(
-        order.items.map(item => {
-          // Defensive: ensure stock and quantity are numbers
-          const currentStock = typeof item.product.stock === 'number' ? item.product.stock : 0;
+        order.items.map((item: any) => {
+          const currentStock = typeof item.product?.stock === 'number' ? item.product.stock : 0;
           const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
           const newStock = currentStock + quantity;
-          return productsService.updateProductStock(item.product.id, newStock);
+          return productsService.updateProductStock(item.product?.id ?? '', newStock);
         })
       );
     },
-    onSuccess: (data, canceledOrder) => {
-      // Optimistically remove canceled order from UI
-      setOrders(prev => prev ? prev.filter(order => order.id !== canceledOrder.id) : prev);
+    onSuccess: () => {
+      console.log('Order canceled successfully, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
 
-  // Hydrate orders with products if needed
-  const [orders, setOrders] = React.useState(ordersRaw);
+  const cancelOrderItemMutation = useMutation<void, Error, { orderId: string; itemId: string }>({
+    mutationFn: async ({ orderId, itemId }) => {
+      console.log('Canceling order item with id:', itemId, 'in order:', orderId);
+      await ordersService.cancelOrderItem(orderId, itemId);
+    },
+    onSuccess: () => {
+      console.log('Order item canceled successfully, invalidating queries');
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
+  });
+
+  const [orders, setOrders] = React.useState<OrderType[] | undefined>(ordersRaw);
   React.useEffect(() => {
     if (ordersRaw && Array.isArray(products)) {
-      setOrders(hydrateOrdersWithProducts(ordersRaw, products));
+      setOrders(hydrateOrdersWithProducts(ordersRaw, products) as unknown as any);
     } else if (ordersRaw) {
       setOrders(ordersRaw);
     }
   }, [ordersRaw, products]);
-
-  // If React Query error persists, try cleaning node_modules and reinstalling dependencies
-  if (productsError) {
-    console.error('Error fetching products:', productsError);
-  }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="relative">
           <Package className="h-5 w-5" />
-          {orders && orders.filter(order => order.status !== 'canceled').length > 0 && (
+          {orders && orders.filter(order => order.status.toLowerCase() !== 'canceled').length > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
-              {orders.filter(order => order.status !== 'canceled').length}
+              {orders.filter(order => order.status.toLowerCase() !== 'canceled').length}
             </span>
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Your Orders</DialogTitle>
         </DialogHeader>
@@ -149,61 +133,75 @@ const OrdersDialog = () => {
             No orders found
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Products</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.filter(order => order.status !== 'canceled').map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id.slice(0, 4)}</TableCell>
-                  <TableCell>
-                    {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
-                      ? format(new Date(order.createdAt), 'MM dd yyyy')
-                      : 'N/A'}
-                  </TableCell>
-                  
-                  <TableCell>
-                    <ul className="list-disc ml-4">
-                      {order.items.map((item) => (
-                        <li key={item.id} className="flex justify-between">
-                          <span style={{ wordBreak: 'break-word', maxWidth: 500, display: 'inline-block', whiteSpace: 'pre-line' }}>
-                            {item.product?.name
-                              ? item.product.name.replace(/(.{25})/g, '$1\n')
-                              : 'Unknown Product'}
-                          </span>
-                          <span>${item.price} x {item.quantity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </TableCell>
-                  <TableCell>
-  ${order.items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)}
-</TableCell>
-                  <TableCell>
-                    {getStatusBadge(order.status)}
-                    {(order.status === 'pending' || order.status === 'processing') && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => cancelOrderMutation.mutate(order)}
-                        disabled={cancelOrderMutation.isLoading}
-                        style={{ marginLeft: 8 }}
+          <div className="max-h-[600px] overflow-y-auto space-y-8">
+            {orders.filter(order => order.status.toLowerCase() !== 'canceled').map((order) => {
+              const createdDate = order.created_at || '';
+              const formattedDate = createdDate
+                ? format(new Date(createdDate), 'MMM d, yyyy')
+                : 'N/A';
+
+              return (
+                <section key={order.id} className="border-b last:border-b-0 pb-6">
+                  <h2 className="mb-4 font-semibold text-lg">Order {order.id.substring(0, 8)}...</h2>
+                  <div className="flex flex-col space-y-2">
+                    {/* Header Row */}
+                    <div className="hidden md:flex bg-gray-100 rounded-md px-3 py-2 text-center text-sm font-semibold text-gray-700">
+                      <div className="flex-1 text-left- w-[20px] ">Image</div>
+                      <div className="flex-1 flex justify-center min-w-[80px]">Product Name</div>
+                      <div className="flex-1 flex justify-center w-[100px]">Total Price</div>
+                      <div className="flex-1 flex justify-center w-[120px]">Date</div>
+                      <div className="flex-1 flex justify-center w-[150px]">Status</div>
+                    </div>
+                    {/* Product Rows */}
+                    {order.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap md:flex-nowrap items-center border rounded-md px-5 gap-4 md:gap-0"
                       >
-                        Cancel
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        {/* Image */}
+                        <div className="flex-shrink-0 w-[120px] h-[120px] rounded-md overflow-hidden">
+                            <img
+                              src={(item?.product as any)?.image || '/placeholder.svg'}
+                              alt={item?.product?.name || 'Product image'}
+                              className="w-full h-full object-cover"
+                            />
+                        </div>
+                        {/* Product Name & Quantity */}
+                        <div className="flex-1 flex flex-col items-center md:items-center text-center md:text-center min-w-[150px]">
+                          <div className="font-medium">{item?.product?.name || 'Unknown Product'}</div>
+                          <div>x {item.quantity}</div>
+                        </div>
+                        {/* Total Price */}
+                        <div className="flex-1 flex justify-center items-center w-[100px] text-center">
+                        ₱{ (item.price * item.quantity).toFixed(2) }
+                        </div>
+                        {/* Date */}
+                        <div className="flex-1 flex justify-center items-center w-[120px] text-center">
+                          {formattedDate}
+                        </div>
+                        {/* Status */}
+                        <div className="flex-1 flex justify-center items-center w-[150px] text-center">
+                          <div className=" items-center space-y-2">
+                            {getStatusBadge(order.status)}
+                            {(order.status.toLowerCase() === 'pending' || order.status.toLowerCase() === 'processing') && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => cancelOrderItemMutation.mutate({ orderId: order.id, itemId: item.id })}
+                                disabled={cancelOrderItemMutation.status === 'loading'}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         )}
       </DialogContent>
     </Dialog>

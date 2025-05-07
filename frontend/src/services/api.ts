@@ -259,6 +259,7 @@ export const productsService = {
 export const ordersService = {
   clearCart: () => apiRequest('orders/cart/clear/', 'POST'),
   cancelOrder: (orderId: string) => apiRequest(`orders/${orderId}/cancel/`, 'POST'),
+  cancelOrderItem: (orderId: string, itemId: string) => apiRequest(`orders/${orderId}/cancel-item/`, 'POST', { item_id: itemId }),
   updateOrderStatus: (orderId: string, status: string) =>
     apiRequest(`orders/${orderId}/`, 'PATCH', { status }),
   createOrder: (orderData: DjangoOrderCreate) => 

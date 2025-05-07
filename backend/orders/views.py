@@ -16,9 +16,52 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = self.get_object()
         if order.status == 'canceled':
             return Response({'detail': 'Order is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Restore stock for all items in the order
+        for item in order.items.all():
+            product = item.product
+            if product:
+                product.stock = (product.stock or 0) + (item.quantity or 0)
+                product.save()
+            item.status = 'canceled'
+            item.save()
+
         order.status = 'canceled'
         order.save()
         return Response({'status': 'canceled'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='cancel-item')
+    def cancel_item(self, request, pk=None):
+        """
+        Cancel an individual order item by item id.
+        Expects 'item_id' in request.data.
+        """
+        item_id = request.data.get('item_id')
+        if not item_id:
+            return Response({'detail': 'Item ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        order = self.get_object()
+        try:
+            item = order.items.get(id=item_id)
+        except Exception:
+            return Response({'detail': 'Item not found in order'}, status=status.HTTP_404_NOT_FOUND)
+        # The OrderItem model does not have a 'status' field, so we cannot check or set it.
+        # Instead, we will delete the item to represent cancellation and restore stock.
+
+        # Restore stock for the canceled item
+        product = item.product
+        if product:
+            product.stock = (product.stock or 0) + (item.quantity or 0)
+            product.save()
+
+        # Delete the item to cancel it
+        item.delete()
+
+        # Check if all items are canceled, then cancel the order
+        if not order.items.exists():
+            order.status = 'canceled'
+            order.save()
+
+        return Response({'status': 'item canceled'}, status=status.HTTP_200_OK)
     
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
