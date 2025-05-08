@@ -142,7 +142,7 @@ const OrdersDialog = () => {
 
               return (
                 <section key={order.id} className="border-b last:border-b-0 pb-6">
-                  <h2 className="mb-4 font-semibold text-lg">Order {order.id.substring(0, 8)}...</h2>
+                  <h2 className="mb-4 font-semibold text-lg hidden">Order {order.id.substring(0, 8)}...</h2>
                   <div className="flex flex-col space-y-2">
                     {/* Header Row */}
                     <div className="hidden md:flex bg-gray-100 rounded-md px-3 py-2 text-center text-sm font-semibold text-gray-700">

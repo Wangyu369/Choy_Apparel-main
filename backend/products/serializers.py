@@ -19,7 +19,9 @@ class ProductSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
-        return None
+        if request:
+            return request.build_absolute_uri('/media/placeholder.jpg')
+        return '/media/placeholder.jpg'
 
     class Meta:
         model = Product
@@ -40,7 +42,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
-        return None
+        if request:
+            return request.build_absolute_uri('/media/placeholder.jpg')
+        return '/media/placeholder.jpg'
 
     class Meta:
         model = Product

@@ -22,6 +22,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             return ProductListSerializer
         return ProductSerializer
 
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return super().get_serializer(*args, **kwargs)
         
     def get_queryset(self):
         queryset = Product.objects.all()
@@ -38,7 +41,7 @@ def product_by_category(request):
         return Response({"error": "Category parameter is required"}, status=400)
     
     products = Product.objects.filter(category__code=category_code)
-    serializer = ProductListSerializer(products, many=True)
+    serializer = ProductListSerializer(products, many=True, context={'request': request})
     return Response(serializer.data)
 
 
