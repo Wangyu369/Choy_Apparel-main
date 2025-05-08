@@ -181,13 +181,13 @@ export async function apiRequest<T>(
   }
   
   const url = `${API_URL}/${endpoint}`;
-  console.log('Making API request to:', url); // Debug log
+ 
   
   const response = await fetch(url, options);
-  console.log('Response status:', response.status); // Debug log
+  
   
   if (response.status === 401) {
-    console.error('Unauthorized: Token may be missing or invalid');
+    console.error('Please sign up');
   }
   
   return response.json();
@@ -288,4 +288,7 @@ export const ordersService = {
 
   mergeCart: (guestCart: CartItem[]) =>
     apiRequest('orders/cart/merge/', 'POST', { items: guestCart }),
+
+  clearCart: () =>
+    apiRequest('orders/cart/clear/', 'POST'),
 };

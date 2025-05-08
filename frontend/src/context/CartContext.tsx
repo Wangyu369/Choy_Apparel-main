@@ -53,13 +53,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const loadCart = async () => {
-      // Check if checkout was completed and clear cart if so
+      // Check if checkoutComplete flag is set in localStorage
       const checkoutComplete = localStorage.getItem('checkoutComplete');
       if (checkoutComplete === 'true') {
-        localStorage.removeItem('checkoutComplete');
+        // Clear cart and localStorage, remove flag
         setItems([]);
         localStorage.removeItem('cart');
         localStorage.removeItem('cartMerged');
+        localStorage.removeItem('checkoutComplete');
+        lastSyncedItemsRef.current = [];
+        initialLoadRef.current = false;
+
+        // Clear backend cart to prevent repopulation on refresh
+        if (isAuthenticated && user) {
+          ordersService.clearUserCart().catch(error => {
+            console.error('Failed to clear backend cart after checkout:', error);
+          });
+        }
+
         return;
       }
 
@@ -248,6 +259,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearCart = () => {
     setItems([]);
     toast.success('Cart cleared');
+    // Remove all cart related localStorage keys immediately
+    localStorage.removeItem('cart');
+    localStorage.removeItem('cartMerged');
+    localStorage.removeItem('checkoutComplete');
   };
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);

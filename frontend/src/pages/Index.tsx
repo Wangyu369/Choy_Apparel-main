@@ -1,18 +1,11 @@
-
 import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useLocation } from 'react-router-dom';
-import Banner from '@/components/Banner';
-import ProductGrid from '@/components/ProductGrid';
+import Banner from '../components/Banner';
+import ProductGrid from '../components/ProductGrid';
 import { productsService } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { 
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
-import { CheckCircle } from 'lucide-react';
 
 const Index = () => {
   const { data: bestSellers, isLoading, error } = useQuery({
@@ -24,12 +17,17 @@ const Index = () => {
   const location = useLocation();
   const orderSuccess = location.state?.orderSuccess;
   const orderId = location.state?.orderId;
+  const productNames = location.state?.productNames;
   
   useEffect(() => {
-    if (orderSuccess && orderId) {
-      toast.success(`Order #${orderId} placed successfully!`);
+    if (orderSuccess) {
+      if (productNames) {
+        toast.success(`Order successful!`);
+      } else if (orderId) {
+        toast.success(`Order placed successfully!`);
+      }
     }
-  }, [orderSuccess, orderId]);
+  }, [orderSuccess, orderId, productNames]);
 
   console.log('BestSellers:', bestSellers);
   return (
@@ -41,15 +39,7 @@ const Index = () => {
 
       <main className="flex-1">
         <div className="container px-4 mx-auto py-8">
-          {orderSuccess && (
-            <Alert className="mb-6 bg-green-50 border-green-200">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <AlertTitle className="text-green-800">Order Successful!</AlertTitle>
-              <AlertDescription className="text-green-700">
-                Your order #{orderId} has been placed successfully. Thank you for shopping with us!
-              </AlertDescription>
-            </Alert>
-          )}
+          
           
           {/* Banner */}
           <Banner />

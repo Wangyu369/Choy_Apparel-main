@@ -117,7 +117,9 @@ const OrdersDialog = () => {
           <Package className="h-5 w-5" />
           {orders && orders.filter(order => order.status.toLowerCase() !== 'canceled').length > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
-              {orders.filter(order => order.status.toLowerCase() !== 'canceled').length}
+              {orders
+                .filter(order => order.status.toLowerCase() !== 'canceled')
+                .reduce((total, order) => total + order.items.reduce((sum, item) => sum + (item.quantity || 0), 0), 0)}
             </span>
           )}
         </Button>

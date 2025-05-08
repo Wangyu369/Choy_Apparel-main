@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '@/context/CartContext';
-import { ordersService } from '@/services/api';
+import { useCart } from '../context/CartContext';
+import { ordersService } from '../services/api';
 import { toast } from 'sonner';
-import { Address, PaymentMethod, DjangoOrderCreate } from '@/utils/products.types';
-import { useAuth } from '@/context/AuthContext';
+import { Address, PaymentMethod, DjangoOrderCreate } from '../utils/products.types';
+import { useAuth } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const useCheckout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { items, totalPrice, clearCart } = useCart();
   const { refreshToken, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const processCheckout = async (
     shippingAddress: Address,
@@ -77,16 +79,31 @@ export const useCheckout = () => {
       // Send order to the API
       const response = await ordersService.createOrder(orderData);
       
-      // Handle successful order
-      toast.success(`Order #${response.id} placed successfully!`);
+      // Invalidate orders query to update badge
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      
+      // Construct product names string for success message
+      const productNames = items.map(item => item.product.name).join(', ');
+      
+      // Handle successful order with product names instead of order id
+      toast.success(`Order successful! Products ordered: ${productNames}`);
+      
+      // Clear backend cart immediately after successful checkout
+      await ordersService.clearCart();
+
+      // Set checkoutComplete flag before clearing cart to trigger CartContext effect
+      localStorage.setItem('checkoutComplete', 'true');
+      
+      // Clear cart immediately after successful checkout
       clearCart();
       
-      // Redirect to success page with order info
+      // Redirect to success page with order info and product names
       navigate('/', { 
         state: { 
           orderSuccess: true,
           orderId: response.id,
-          paymentMethod
+          paymentMethod,
+          productNames
         } 
       });
       

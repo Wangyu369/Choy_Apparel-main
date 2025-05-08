@@ -57,8 +57,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
         onClose();
       }
     } catch (err) {
-      console.error('Auth error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
+      let errorMessage = err instanceof Error ? err.message : 'Authentication failed';
+      if (errorMessage.includes("Cannot read properties of undefined (reading 'id')")) {
+        errorMessage = "Please create an account";
+      }
       setError(errorMessage);
       toast.error(errorMessage);
     }
