@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import axios from 'axios';
 
 // Always set the latest access token from localStorage on every request

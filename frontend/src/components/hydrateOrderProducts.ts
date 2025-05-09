@@ -7,7 +7,7 @@ export function hydrateOrdersWithProducts(orders: Order[], products: Product[]):
     productMap[String(product.id)] = product;
   }
   return orders.map(order => {
-    const createdAt = order.createdAt || order.created_at || '';
+    const createdAt = order.createdAt || '';
     return {
       ...order,
       createdAt,
