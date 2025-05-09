@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
-import { useCheckout } from '@/hooks/useCheckout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useCheckout } from '../hooks/useCheckout';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
-import { Address, PaymentMethod } from '@/utils/products.types';
+import { Address, PaymentMethod } from '../utils/products.types';
 import { 
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '../components/ui/dialog';
 
 const CheckoutPage = () => {
   const { isAuthenticated, user,refreshToken } = useAuth();
@@ -302,9 +302,10 @@ const CheckoutPage = () => {
                   <div className="grid md:grid-cols-2 gap-4 mb-6">
                     <Button
                       type="button"
-                      variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                      className={`w-full ${paymentMethod === 'card' ? 'ring-2 ring-primary' : ''}`}
-                      onClick={() => setPaymentMethod('card')}
+                      variant="outline"
+                      className="w-full cursor-not-allowed opacity-50"
+                      disabled
+                      title="Card payment is currently unavailable"
                     >
                       Card
                     </Button>
@@ -317,46 +318,6 @@ const CheckoutPage = () => {
                       Cash on Delivery
                     </Button>
                   </div>
-                  
-                  {paymentMethod === 'card' && (
-                    <div className="pt-4 space-y-4">
-                      <h3 className="font-medium">Card Payment Details</h3>
-                      
-                      <div>
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input 
-                          id="cardNumber" 
-                          placeholder="1234 5678 9012 3456" 
-                          value={cardNumber}
-                          onChange={handleCardNumberChange}
-                          required 
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="col-span-2">
-                          <Label htmlFor="expiry">Expiry Date</Label>
-                          <Input 
-                            id="expiry" 
-                            placeholder="MM/YY" 
-                            value={expiryDate}
-                            onChange={handleExpiryDateChange}
-                            required 
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvc">CVC</Label>
-                          <Input 
-                            id="cvc" 
-                            placeholder="123" 
-                            value={cvc}
-                            onChange={handleCvcChange}
-                            required 
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 
                 <Button 

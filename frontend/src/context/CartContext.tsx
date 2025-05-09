@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Product } from '../utils/products';
 import { useAuth } from './AuthContext';
 import { ordersService } from '../services/api';
+import { Product } from '../utils/products.types';
+
 
 type CartItem = {
   product: Product;
@@ -66,7 +67,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Clear backend cart to prevent repopulation on refresh
         if (isAuthenticated && user) {
-          ordersService.clearUserCart().catch(error => {
+          ordersService.clearCart().catch(error => {
             console.error('Failed to clear backend cart after checkout:', error);
           });
         }

@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import ProductGrid from '../components/ProductGrid';
 import { productsService } from '../services/api';
-import { getProductsByCategory } from '../utils/products';
 import { useQuery } from '@tanstack/react-query';
 
 const CategoryPage = () => {

@@ -106,10 +106,12 @@ const OrderList: React.FC<OrderListProps> = ({ orders }) => {
                   <div className="flex-1 flex justify-center items-center w-[100px] text-center">
                     ${ (item.price * item.quantity).toFixed(2) }
                   </div>
-                  {/* Date */}
+                {/* Date */}
+                {createdDate && !isNaN(new Date(createdDate).getTime()) && (
                   <div className="flex-1 flex justify-center items-center w-[120px] text-center">
                     {formattedDate}
                   </div>
+                )}
                   {/* Status */}
                   <div className="flex-1 flex justify-center items-center w-[150px] text-center">
                     <div className="flex items-center gap-2">
